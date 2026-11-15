@@ -17,14 +17,9 @@ Para que solo la use un proyecto, clónala en `.claude/skills/pagespeed-audit` d
 ## Requisitos
 
 - Python 3.8 o superior (solo usa la biblioteca estándar).
-- Uno de estos dos:
-  - **Node.js y Google Chrome**: se usa Lighthouse en local. Es gratis, no necesita key y también mide `localhost`.
-  - **Una API key de PageSpeed** (gratuita): da además datos de usuarios reales (CrUX). Créala en https://developers.google.com/speed/docs/insights/v5/get-started y añádela a tu shell:
-    ```bash
-    export PAGESPEED_API_KEY=tu_key
-    ```
+- Node.js y Google Chrome: la skill ejecuta **Lighthouse** (el motor de Google PageSpeed Insights) en tu equipo.
 
-Sin key, Google da cuota 0 a la API. Por eso, si no hay key, la skill usa Lighthouse local automáticamente.
+No necesita API key ni cuenta: es gratis. Además puede medir `localhost`. Los datos de usuarios reales de Google (CrUX) no salen en Lighthouse local, así que el informe incluye un enlace directo al análisis oficial en [pagespeed.web.dev](https://pagespeed.web.dev) para consultarlos.
 
 ## Uso
 
@@ -34,15 +29,18 @@ Abre Claude en la carpeta del proyecto web y pídelo con tus palabras:
 
 Claude mide la web, escribe `pagespeed-informe-<dominio>-<fecha>.md` y te pregunta qué arreglos aplicar. No toca el código hasta que elijas, y no hace commit ni despliega sin que se lo pidas.
 
+El informe empieza con un veredicto y un **plan de acción** en tabla: cada arreglo con su prioridad (🔥 hacer ya · 📌 planificar · 💤 no prioritario), dificultad (🟢 🟡 🔴), tiempo estimado, quién lo hace y qué se gana. Después vienen las fichas detalladas de cada arreglo, lo que *no* merece la pena hacer, las notas de medición y un glosario.
+
 Si quieres ejecutar solo la medición:
 
 ```bash
 python3 scripts/run_pagespeed.py https://miweb.com --out ./pagespeed-report
-python3 scripts/run_pagespeed.py http://localhost:3000 --engine local --strategy mobile
+python3 scripts/run_pagespeed.py http://localhost:3000 --strategy mobile
 ```
 
 ## Contenido
 
 - `SKILL.md`: instrucciones para Claude (flujo y plantilla del informe).
-- `scripts/run_pagespeed.py`: medición con la API de PageSpeed v5 o con Lighthouse local; genera `summary.json`.
+- `scripts/run_pagespeed.py`: medición con Lighthouse (móvil y escritorio); genera `summary.json`.
+- `references/report-template.md`: plantilla del informe, leyendas de iconos y criterios de prioridad.
 - `references/audit-fixes.md`: causa y solución de las auditorías habituales de Lighthouse.

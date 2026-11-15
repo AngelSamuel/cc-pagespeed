@@ -1,24 +1,16 @@
 #!/usr/bin/env python3
-"""Auditoría de rendimiento con PageSpeed Insights (API v5) o Lighthouse local.
+"""Auditoría web con Lighthouse (el motor de Google PageSpeed Insights) en local.
 
-Solo usa la biblioteca estándar de Python, así funciona en cualquier equipo.
-
-Motores (--engine):
-    api    API de Google PageSpeed Insights. Necesita PAGESPEED_API_KEY
-           (gratuita): sin key Google da cuota 0. Incluye datos de campo
-           (usuarios reales, CrUX). No puede analizar localhost.
-    local  Lighthouse en este equipo vía npx (gratis, sin key). Necesita Node
-           y Chrome. Mismo motor que PageSpeed, sin datos de campo. Sí puede
-           analizar localhost.
-    auto   (por defecto) api si hay key; si no hay key, o la API falla por
-           cuota, cae a local.
+Gratis y sin API key: ejecuta Lighthouse con npx y Chrome en headless.
+Requisitos: Python 3.8+, Node.js y Google Chrome. Puede medir URLs públicas
+y también localhost.
 
 Uso:
     python3 run_pagespeed.py https://ejemplo.com --out ./pagespeed-report
-    python3 run_pagespeed.py http://localhost:3000 --engine local
+    python3 run_pagespeed.py http://localhost:3000 --strategy mobile
 
 Salida en --out:
-    raw-<strategy>.json   respuesta completa de la API (por si hace falta un detalle)
+    raw-<strategy>.json   informe completo de Lighthouse (por si hace falta un detalle)
     summary.json          resumen de ambas estrategias, pensado para leerlo Claude
 """
 
@@ -29,24 +21,12 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import time
-import urllib.error
 import urllib.parse
-import urllib.request
 
-API = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
-CATEGORIES = ["PERFORMANCE", "ACCESSIBILITY", "BEST_PRACTICES", "SEO"]
 LIGHTHOUSE_PKG = "lighthouse@13.6.0"  # versión fijada: lo que se ejecuta es predecible
-MAX_ITEMS = 8  # elementos por auditoría en el resumen
+MAX_ITEMS = 15  # elementos por auditoría en el resumen
 SKIP_MODES = {"notApplicable", "manual"}
 
-FIELD_METRICS = {
-    "LARGEST_CONTENTFUL_PAINT_MS": "LCP (ms)",
-    "INTERACTION_TO_NEXT_PAINT": "INP (ms)",
-    "CUMULATIVE_LAYOUT_SHIFT_SCORE": "CLS (x100)",
-    "FIRST_CONTENTFUL_PAINT_MS": "FCP (ms)",
-    "EXPERIMENTAL_TIME_TO_FIRST_BYTE": "TTFB (ms)",
-}
 LAB_METRICS = [
     "first-contentful-paint",
     "largest-contentful-paint",
@@ -57,24 +37,14 @@ LAB_METRICS = [
 ]
 
 
-class QuotaError(Exception):
-    pass
-
-
-def is_local_host(url):
-    host = urllib.parse.urlparse(url).hostname or ""
-    return host in ("localhost", "127.0.0.1", "::1") or host.endswith((".localhost", ".test", ".local"))
-
-
 def run_local(url, strategy, locale):
-    """Ejecuta Lighthouse en local y devuelve la respuesta con forma de la API."""
+    """Ejecuta Lighthouse en local y devuelve el informe (LHR)."""
     npx = shutil.which("npx")
     if not npx:
         raise SystemExit(
-            "ERROR: no hay API key de PageSpeed y tampoco Node.js para usar Lighthouse en local.\n"
-            "Opciones: 1) instala Node.js (https://nodejs.org) y Google Chrome, o\n"
-            "2) crea una API key gratuita en https://developers.google.com/speed/docs/insights/v5/get-started "
-            "y expórtala como PAGESPEED_API_KEY."
+            "ERROR: no se encuentra Node.js (npx), necesario para ejecutar Lighthouse.\n"
+            "Instala Node.js (https://nodejs.org) y Google Chrome y vuelve a intentarlo.\n"
+            "Mientras tanto puedes analizar la web a mano en https://pagespeed.web.dev"
         )
     with tempfile.TemporaryDirectory() as tmp:
         out = os.path.join(tmp, "lhr.json")
@@ -93,41 +63,7 @@ def run_local(url, strategy, locale):
             raise SystemExit(f"ERROR ejecutando Lighthouse local ({strategy}):\n{err}{hint}")
         with open(out, encoding="utf-8") as f:
             lhr = json.load(f)
-    return {"id": url, "lighthouseResult": lhr}
-
-
-def fetch(url, strategy, key, locale, retries=2):
-    params = [("url", url), ("strategy", strategy.upper()), ("locale", locale)]
-    params += [("category", c) for c in CATEGORIES]
-    if key:
-        params.append(("key", key))
-    full = API + "?" + urllib.parse.urlencode(params)
-    req = urllib.request.Request(full, headers={"User-Agent": "pagespeed-audit-skill"})
-
-    for attempt in range(retries + 1):
-        try:
-            with urllib.request.urlopen(req, timeout=180) as r:
-                return json.load(r)
-        except urllib.error.HTTPError as e:
-            body = e.read().decode("utf-8", "replace")
-            try:
-                msg = json.loads(body)["error"]["message"]
-            except Exception:
-                msg = body[:500]
-            if e.code == 429:
-                if attempt < retries:
-                    time.sleep(15 * (attempt + 1))
-                    continue
-                raise QuotaError(msg)
-            if e.code >= 500 and attempt < retries:
-                time.sleep(5)
-                continue
-            raise SystemExit(f"ERROR {e.code} ({strategy}): {msg}")
-        except urllib.error.URLError as e:
-            if attempt < retries:
-                time.sleep(5)
-                continue
-            raise SystemExit(f"ERROR de red ({strategy}): {e.reason}")
+    return lhr
 
 
 def trim_item(item):
@@ -148,6 +84,8 @@ def trim_item(item):
     node = item if item.get("type") == "node" else item.get("node")
     if isinstance(node, dict):
         n = {k: node.get(k) for k in ("selector", "snippet", "nodeLabel") if node.get(k)}
+        if node.get("explanation"):  # p. ej. colores y ratio en color-contrast
+            n["explanation"] = str(node["explanation"])[:300]
         rect = node.get("boundingRect") or {}
         if rect.get("width"):
             n["displayed"] = f"{round(rect['width'])}x{round(rect.get('height', 0))}"
@@ -217,43 +155,52 @@ def summarize_audit(audit):
     return s
 
 
-def summarize(data):
-    lh = data.get("lighthouseResult", {})
+def summarize(lh):
     audits = lh.get("audits", {})
     res = {
         "finalUrl": lh.get("finalDisplayedUrl") or lh.get("finalUrl"),
         "lighthouseVersion": lh.get("lighthouseVersion"),
         "fetchTime": lh.get("fetchTime"),
         "runWarnings": lh.get("runWarnings") or [],
+        "throttling": (lh.get("configSettings") or {}).get("throttlingMethod"),
         "scores": {},
-        "field": None,
         "lab": {},
+        "page": {},
         "issues": {},
     }
-
-    le = data.get("loadingExperience") or {}
-    if le.get("metrics"):
-        res["field"] = {
-            "scope": "página" if le.get("id") == data.get("id") and not le.get("origin_fallback") else "origen",
-            "overall": le.get("overall_category"),
-            "metrics": {
-                label: {"p75": m.get("percentile"), "category": m.get("category")}
-                for key, label in FIELD_METRICS.items()
-                if (m := le["metrics"].get(key))
-            },
-        }
 
     lcp = audits.get("lcp-breakdown-insight") or audits.get("lcp-phases-insight") or {}
     lcp_items = flatten_items(lcp.get("details") or {})
     nodes = [i for i in lcp_items if i.get("type") == "node"]
     phases = {i.get("label"): round(i["duration"]) for i in lcp_items if i.get("duration") is not None}
     if nodes or phases:
-        res["lcp"] = {"element": trim_item(nodes[0]).get("node") if nodes else None, "phasesMs": phases}
+        # Ojo: las fases salen de la traza observada (sin la limitación simulada), así que
+        # suman menos que el LCP simulado. Sirven para ver la proporción, no el valor absoluto.
+        res["lcp"] = {"element": trim_item(nodes[0]).get("node") if nodes else None,
+                      "phasesMsObserved": phases}
+
+    weight = audits.get("total-byte-weight") or {}
+    if weight.get("numericValue"):
+        res["page"]["totalKB"] = round(weight["numericValue"] / 1024)
+    reqs = ((audits.get("network-requests") or {}).get("details") or {}).get("items") or []
+    if reqs:
+        res["page"]["requests"] = len(reqs)
+        by_type = {}
+        for r in reqs:
+            t = r.get("resourceType") or "Other"
+            by_type[t] = by_type.get(t, 0) + (r.get("transferSize") or 0)
+        top = sorted(reqs, key=lambda r: -(r.get("transferSize") or 0))[:15]
+        res["page"]["largestRequests"] = [
+            {"url": (r.get("url") or "")[:200], "type": r.get("resourceType"),
+             "kb": round((r.get("transferSize") or 0) / 1024), "priority": r.get("priority"),
+             "protocol": r.get("protocol")} for r in top]
+        res["page"]["kbByType"] = {k: round(v / 1024) for k, v in sorted(by_type.items(), key=lambda x: -x[1]) if v}
 
     for mid in LAB_METRICS:
         a = audits.get(mid)
         if a:
-            res["lab"][a.get("title", mid)] = {"value": a.get("displayValue"), "score": a.get("score")}
+            res["lab"][a.get("title", mid)] = {"id": mid, "value": a.get("displayValue"),
+                                               "numericValue": a.get("numericValue"), "score": a.get("score")}
 
     for cid, cat in (lh.get("categories") or {}).items():
         score = cat.get("score")
@@ -277,53 +224,45 @@ def summarize(data):
                                     -(x.get("overallSavingsMs") or 0),
                                     x.get("score") if x.get("score") is not None else 1))
         res["issues"][cid] = failing
+        # Lo que está bien también sirve: descarta causas y da contexto al informe.
+        res.setdefault("passed", {})[cid] = [
+            audits[r["id"]].get("title") for r in cat.get("auditRefs", [])
+            if r["id"] in audits and audits[r["id"]].get("score") == 1
+            and audits[r["id"]].get("scoreDisplayMode") not in SKIP_MODES | {"informative"}
+            and r.get("group") != "metrics" and r["id"] not in LAB_METRICS][:25]
     return res
 
 
 def main():
-    p = argparse.ArgumentParser(description="Auditoría PageSpeed Insights (v5)")
+    p = argparse.ArgumentParser(description="Auditoría web con Lighthouse")
     p.add_argument("url")
-    p.add_argument("--engine", choices=["auto", "api", "local"], default="auto")
     p.add_argument("--strategy", choices=["mobile", "desktop", "both"], default="both")
-    p.add_argument("--key", default=os.environ.get("PAGESPEED_API_KEY"))
     p.add_argument("--locale", default="es")
     p.add_argument("--out", default="./pagespeed-report")
     a = p.parse_args()
 
     url = a.url if a.url.startswith(("http://", "https://")) else "https://" + a.url
-    engine = a.engine
-    if engine == "auto":
-        engine = "api" if a.key and not is_local_host(url) else "local"
-    if engine == "api" and is_local_host(url):
-        raise SystemExit(
-            "ERROR: la API de PageSpeed se ejecuta en servidores de Google y no puede acceder a "
-            "localhost ni a dominios locales. Usa --engine local o una URL pública."
-        )
-    if engine == "api" and not a.key:
-        print("Aviso: sin PAGESPEED_API_KEY Google suele dar cuota 0; probablemente fallará.", file=sys.stderr)
+    host = urllib.parse.urlparse(url).hostname or ""
+    is_local = host in ("localhost", "127.0.0.1", "::1") or host.endswith((".localhost", ".test", ".local"))
 
     os.makedirs(a.out, exist_ok=True)
     strategies = ["mobile", "desktop"] if a.strategy == "both" else [a.strategy]
-    summary = {"url": url, "engine": engine, "strategies": {}}
+    summary = {
+        "url": url,
+        "engine": f"Lighthouse {LIGHTHOUSE_PKG.split('@')[1]} (local)",
+        # Enlace al análisis oficial de Google: muestra los datos de usuarios reales (CrUX),
+        # que Lighthouse local no puede obtener.
+        "pagespeedWebUrl": None if is_local else
+            "https://pagespeed.web.dev/analysis?url=" + urllib.parse.quote(url, safe=""),
+        "strategies": {},
+    }
 
     for st in strategies:
-        print(f"Analizando {url} ({st}, motor {engine})… puede tardar hasta un minuto.", file=sys.stderr)
-        if engine == "api":
-            try:
-                data = fetch(url, st, a.key, a.locale)
-            except QuotaError as e:
-                if a.engine == "api":
-                    raise SystemExit(
-                        f"ERROR 429 ({st}): cuota de la API agotada ({e}).\n"
-                        "Prueba --engine local, o espera / revisa la cuota de tu API key."
-                    )
-                print("La API no tiene cuota; continúo con Lighthouse local.", file=sys.stderr)
-                engine = summary["engine"] = "local"
-        if engine == "local":
-            data = run_local(url, st, a.locale)
+        print(f"Analizando {url} ({st})… puede tardar hasta un minuto.", file=sys.stderr)
+        lhr = run_local(url, st, a.locale)
         with open(os.path.join(a.out, f"raw-{st}.json"), "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False)
-        summary["strategies"][st] = summarize(data)
+            json.dump(lhr, f, ensure_ascii=False)
+        summary["strategies"][st] = summarize(lhr)
 
     path = os.path.join(a.out, "summary.json")
     with open(path, "w", encoding="utf-8") as f:

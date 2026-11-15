@@ -29,7 +29,7 @@ Contenido: [LCP y carga](#lcp-y-carga) · [Recursos que bloquean el renderizado]
 **`image-delivery-insight`** (reúne `uses-optimized-images`, `modern-image-formats`, `uses-responsive-images`, `efficient-animated-content`)
 - Solución: usa AVIF/WebP; dimensiones ajustadas al tamaño mostrado, con `srcset` y `sizes`; comprime al 75-85 %; cambia los GIF animados por `<video autoplay muted loop playsinline>`. Usa el componente de imagen del framework si lo hay. En imágenes estáticas del repositorio puedes convertirlas tú si hay herramienta disponible (`sharp`, `cwebp`, `squoosh-cli`); si vienen de un CMS, es una tarea de contenido.
 
-**`offscreen-images`**: `loading="lazy"` en las imágenes que están debajo del primer pantallazo (nunca en la del LCP).
+**Imágenes fuera de pantalla** (`offscreen-images` hasta Lighthouse 12; en la 13 ya no existe como auditoría): pon `loading="lazy"` en las imágenes que están debajo del primer pantallazo, nunca en la del LCP. En Lighthouse 13 se detecta mirando el HTML: busca los `<img>` que no tienen `loading` o que tienen `loading="eager"` lejos del hero.
 
 **`unsized-images`**: añade `width` y `height`, o `aspect-ratio` en CSS (también ayuda al CLS).
 
