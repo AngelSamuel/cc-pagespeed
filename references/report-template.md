@@ -92,7 +92,7 @@ HTML       █░░░░░░░░░░░░░░░░░░░   19 KB 
 | 2 | … | 📌 Planificar | 🟡 Media | ½ día | 🖥️ | … |
 | 3 | … | 💤 No prioritario | 🟡 Media | ~2 h | 👩‍💻 | −40 ms |
 
-Numera todos los arreglos seguidos, incluidos los de "Fuera del código", para que se puedan elegir por número.
+**Ordena y numera los arreglos por prioridad** (primero todos los 🔥, luego los 📌, luego los 💤), sea cual sea su tipo: un arreglo de servidor puede ser el #1. Dentro de cada prioridad, primero los de más impacto. Las fichas siguen el mismo orden y la misma numeración, para que se puedan elegir por número.
 
 > ⚡ **Quick wins** (menos de 30 min cada uno, de cualquier tipo): #2, #4, #5. Juntos suben <lo que sea> sin riesgo.
 
@@ -129,9 +129,7 @@ Numera todos los arreglos seguidos, incluidos los de "Fuera del código", para q
 
 ### 2. …
 
-## 🖥️ Fuera del código
-
-Arreglos de servidor, hosting, CMS o terceros, con instrucciones para la plataforma concreta (detectada en las cabeceras: nginx, Apache, Plesk, Cloudflare…), con el mismo formato de ficha que arriba.
+Los arreglos de servidor, hosting, CMS o terceros van en esta misma lista, en el lugar que les toca por prioridad, con la misma ficha. Indica `Tipo: Servidor/CDN` o `Terceros/contenido`, y añade una línea **🖥️ Infraestructura** con lo detectado en las cabeceras (nginx, Apache, Plesk, Cloudflare, Fastly…) para que las instrucciones sean para esa plataforma.
 
 ## 🚫 Lo que no haríamos (por ahora)
 
@@ -160,6 +158,12 @@ python3 <ruta real de la skill>/scripts/run_pagespeed.py <URL>
 
 </details>
 ````
+
+## Casos especiales
+
+- **HTML minificado o generado**: si la línea citada es enorme (miles de caracteres), cita el selector CSS y el fragmento en lugar del número de línea.
+- **Mejoras que no marca Lighthouse**: puedes incluirlas si las has comprobado tú (por ejemplo, Brotli frente a gzip comprimiendo el HTML descargado). Di claramente que es una observación propia y cómo la has medido.
+- **Unidades**: Lighthouse usa KiB (1.024 bytes). Escribe "KB" en el informe, por legibilidad, y acláralo una vez en las notas de medición.
 
 ## Cómo decidir la prioridad
 

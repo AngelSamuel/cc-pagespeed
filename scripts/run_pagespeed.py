@@ -181,7 +181,7 @@ def summarize(lh):
 
     weight = audits.get("total-byte-weight") or {}
     if weight.get("numericValue"):
-        res["page"]["totalKB"] = round(weight["numericValue"] / 1024)
+        res["page"]["totalKiB"] = round(weight["numericValue"] / 1024)
     reqs = ((audits.get("network-requests") or {}).get("details") or {}).get("items") or []
     if reqs:
         res["page"]["requests"] = len(reqs)
@@ -192,9 +192,9 @@ def summarize(lh):
         top = sorted(reqs, key=lambda r: -(r.get("transferSize") or 0))[:15]
         res["page"]["largestRequests"] = [
             {"url": (r.get("url") or "")[:200], "type": r.get("resourceType"),
-             "kb": round((r.get("transferSize") or 0) / 1024), "priority": r.get("priority"),
+             "kib": round((r.get("transferSize") or 0) / 1024), "priority": r.get("priority"),
              "protocol": r.get("protocol")} for r in top]
-        res["page"]["kbByType"] = {k: round(v / 1024) for k, v in sorted(by_type.items(), key=lambda x: -x[1]) if v}
+        res["page"]["kibByType"] = {k: round(v / 1024) for k, v in sorted(by_type.items(), key=lambda x: -x[1]) if v}
 
     for mid in LAB_METRICS:
         a = audits.get(mid)

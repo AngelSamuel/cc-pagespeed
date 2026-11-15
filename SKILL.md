@@ -33,7 +33,7 @@ Lee `pagespeed-report/summary.json`. Para cada estrategia contiene:
 
 - `scores`: nota de 0 a 100 por categoría.
 - `lab`: métricas de laboratorio.
-- `page`: peso total en KB, número de peticiones, KB por tipo de recurso y las peticiones más pesadas, con su prioridad y protocolo (para la sección "Peso de la página").
+- `page`: peso total en KiB, número de peticiones, KiB por tipo de recurso y las peticiones más pesadas, con su prioridad y protocolo (para la sección "Peso de la página").
 - `passed`: auditorías que ya están bien. Sirven para descartar causas y para decir qué funciona.
 - `lab`: incluye `numericValue` (valor exacto). Clasifica con él, no con el texto redondeado.
 - `lcp`: qué elemento es el LCP (selector, fragmento de HTML y tamaño mostrado) y el reparto de su tiempo por fases (TTFB, retraso de carga, descarga, renderizado). Las fases vienen de la carga sin limitar, así que úsalas como proporción: dicen si el problema está en el servidor, en el descubrimiento o en el peso.
@@ -55,6 +55,8 @@ Clasifica cada arreglo según dónde se aplica:
 - **Terceros/contenido**: scripts de marketing, chats, imágenes subidas a un CMS. Explica qué decisión hay que tomar y quién la toma.
 
 Para encontrar la causa y la solución de cada auditoría habitual, consulta `references/audit-fixes.md`.
+
+Si el HTML está minificado, cita el selector en lugar de la línea. Si detectas una mejora que Lighthouse no marca (por ejemplo, comprobando la compresión o las cabeceras con `curl`), inclúyela indicando que es una observación propia y cómo la mediste.
 
 **Prioriza** por impacto real y por lo que cuesta arreglarlo, no por el orden de Lighthouse: ahorro estimado, si la métrica afectada está en rojo o ámbar, si pasa en móvil y en escritorio, y la dificultad. Para cada arreglo decide prioridad (🔥 hacer ya / 📌 planificar / 💤 no prioritario), dificultad, tiempo estimado y quién lo hace. Decir "esto no merece la pena ahora" es tan útil como decir qué hacer. Agrupa las auditorías que tienen la misma causa en un solo arreglo (por ejemplo, un LCP lento por una imagen hero pesada y sin precarga).
 
