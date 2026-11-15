@@ -2,6 +2,11 @@
 
 Todos los cambios relevantes de la skill. El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y las versiones siguen [SemVer](https://semver.org/lang/es/).
 
+## [2.0.1] - 2026-11-15
+
+### Añadido
+- Licencia MIT.
+
 ## [2.0.0] - 2026-11-15
 
 ### Cambiado

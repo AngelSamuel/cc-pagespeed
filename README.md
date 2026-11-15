@@ -10,6 +10,7 @@ Analiza cualquier web con Lighthouse, el motor de Google PageSpeed Insights. Te 
 ![Lighthouse](https://img.shields.io/badge/Lighthouse-13.6-F44B21?style=flat-square&logo=lighthouse&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.8%2B-3776AB?style=flat-square&logo=python&logoColor=white)
 ![Coste](https://img.shields.io/badge/coste-gratis%2C%20sin%20API%20key-2EA44F?style=flat-square)
+[![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-blue?style=flat-square)](LICENSE)
 
 [Qué hace](#-qué-hace) · [Instalación](#-instalación) · [Uso](#-uso) · [El informe](#-el-informe) · [Ejemplo](#-ejemplo) · [Línea de comandos](#️-línea-de-comandos) · [Preguntas frecuentes](#-preguntas-frecuentes)
 
@@ -279,9 +280,16 @@ pagespeed-audit/
 ├── examples/
 │   └── theguardian.com-…md      # Informe de ejemplo
 ├── CHANGELOG.md
+├── LICENSE
 └── README.md
 ```
 
 ## 📜 Cambios
 
 Consulta el historial en [CHANGELOG.md](CHANGELOG.md).
+
+## ⚖️ Licencia
+
+Distribuida bajo la [licencia MIT](LICENSE): puedes usarla, modificarla y redistribuirla libremente, también con fines comerciales, siempre que mantengas el aviso de copyright.
+
+Lighthouse es un proyecto de Google con licencia Apache 2.0. Esta skill lo ejecuta a través de npm, pero no lo incluye.
