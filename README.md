@@ -65,13 +65,13 @@ flowchart LR
 Para todos tus proyectos:
 
 ```bash
-git clone https://github.com/AngelSamuel/pagespeed.git ~/.claude/skills/pagespeed-audit
+git clone https://github.com/AngelSamuel/cc-pagespeed.git ~/.claude/skills/pagespeed-audit
 ```
 
 Solo para un proyecto (y compartirla con el equipo a través del repositorio):
 
 ```bash
-git clone https://github.com/AngelSamuel/pagespeed.git .claude/skills/pagespeed-audit
+git clone https://github.com/AngelSamuel/cc-pagespeed.git .claude/skills/pagespeed-audit
 ```
 
 ### Claude Desktop y Claude.ai
